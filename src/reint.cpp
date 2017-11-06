@@ -1,6 +1,42 @@
 #include "reint.h"
 
-int TestCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+/* reint.set KEY VALUE */
+int reint_set(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    if(argc != 3){
+        RedisModule_WrongArity(ctx);
+    }
+    
+    RedisModule_ReplyWithLongLong(ctx,1);
+
+    return REDISMODULE_OK;
+}
+
+/* redis.get KEY */
+int reint_get(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    if(argc != 2){
+        RedisModule_WrongArity(ctx);
+    }
+
+    RedisModule_ReplyWithLongLong(ctx,1);
+    return REDISMODULE_OK;
+}
+
+/* redis.incr KEY VALUE */
+int reint_incr(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    if(argc != 3){
+        RedisModule_WrongArity(ctx);
+    }
+
+    RedisModule_ReplyWithLongLong(ctx,1);
+    return REDISMODULE_OK;
+}
+
+/* redis.decr KEY VALUE */
+int reint_decr(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    if(argc != 3){
+        RedisModule_WrongArity(ctx);
+    }
+
     RedisModule_ReplyWithLongLong(ctx,1);
     return REDISMODULE_OK;
 }
@@ -11,8 +47,19 @@ extern "C" int RedisModule_OnLoad(RedisModuleCtx *ctx) {
         return REDISMODULE_ERR;
     }
 
-    // register our command – it is a write command, with one key at argv[1]
-    if (RedisModule_CreateCommand(ctx, "RETEST", TestCommand, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+    if (RedisModule_CreateCommand(ctx, "reint.set", reint_set, "write", 1, 1, 1) == REDISMODULE_ERR) {
+        return REDISMODULE_ERR;
+    }
+
+    if (RedisModule_CreateCommand(ctx, "reint.get", reint_get, "readonly", 1, 1, 1) == REDISMODULE_ERR) {
+        return REDISMODULE_ERR;
+    }
+
+ if (RedisModule_CreateCommand(ctx, "reint.incr", reint_incr, "write", 1, 1, 1) == REDISMODULE_ERR) {
+        return REDISMODULE_ERR;
+    }
+
+ if (RedisModule_CreateCommand(ctx, "reint.decr", reint_decr, "write", 1, 1, 1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
 

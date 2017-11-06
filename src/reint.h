@@ -1,10 +1,10 @@
-#ifndef __REJSON_H__
-#define __REJSON_H__
+#ifndef REINT_H
+#define REINT_H
 
 #include "redismodule.h"
 
-#define RLMODULE_NAME "ReJSON"
-#define RLMODULE_DESC "JSON data type for Redis"
+#define RLMODULE_NAME "ReINT"
+#define RLMODULE_DESC "Integer data type for Redis"
 
 #ifndef PROJECT_VERSION_MAJOR
 #define PROJECT_VERSION_MAJOR 999
