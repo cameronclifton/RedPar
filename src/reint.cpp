@@ -33,12 +33,25 @@ private:
 
 void work(){
 
+  while(true){
+    
+    event_queue& eq = event_queue::getInstance();
+    if(eq.queue_mutex.try_lock() == true){
+      if(eq.events.empty() == true){
+	eq.queue_mutex.unlock();
+      }
+      else{
+	event e = eq.events.front();
+	//do something based on e attributes
+	eq.events.pop();
+	eq.queue_mutex.unlock();
+      }
+    }
+     
 
-
-
-    //switch for all operations
-
-  
+      
+    }
+     //switch for all operations
   
 }
 
