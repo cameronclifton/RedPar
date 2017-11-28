@@ -1,3 +1,9 @@
+ifndef RM_INCLUDE_DIR
+	RM_INCLUDE_DIR=$(shell pwd)
+endif
+
+DEPS_DIR="$(RM_INCLUDE_DIR)/../deps"
+
 #debug is compiled with -O0
 ifndef DEBUG
 	DEBUG = 0
@@ -13,18 +19,24 @@ CXXFILES = t_int reint
 TARGET = reint.so
 
 OFILES = $(patsubst %, %.o, $(CXXFILES))
-CXXFLAGS = -Wall $(DEBUGFLAGS)
+INCLUDE_DIRS = -I"$(DEPS_DIR)/junction/junction-install/include" 
+CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS)
+LIBS = $(DEPS_DIR)/junction/libjunction.a
 SHOBJ_LDFLAGS ?= -dylib -exported_symbol _RedisModule_OnLoad -macosx_version_min 10.6
 
 all: $(TARGET)
+
+junction:
+	$(MAKE) -C $(DEPS_DIR)/junction 
+.PHONY: junction
 
 %.o: %.cpp
 	@echo [CXX] $< "-->" $@
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(TARGET): $(OFILES)
+$(TARGET): junction $(OFILES)
 	@echo [LD] $^ "-->" $@
-	$(LD) -o $@ $^ $(SHOBJ_LDFLAGS) -lc -lm 
+	$(LD) -o $@ $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) -lc -lm 
 
 .PHONY: all clean
 

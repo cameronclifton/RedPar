@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/core.h
+turf_config.h
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/turf_config.h
+platform_detect.h
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/platform_detect.h
+xtl.h
+-
+windows.h
+-
+stddef.h
+-
+stdint.h
+-
+impl/compiler_msvc.h
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/impl/compiler_msvc.h
+impl/compiler_gcc.h
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/impl/compiler_gcc.h
+
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/impl/atomic_gcc_arm.c
+turf/c/core.h
+-
+
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/impl/compiler_gcc.h
+
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/impl/compiler_msvc.h
+intrin.h
+-
+
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/turf/turf/c/platform_detect.h
+TargetConditionals.h
+-
+
+turf/include/turf_config.h
+turf_userconfig.h
+turf/include/turf_userconfig.h
+
+turf/include/turf_userconfig.h
+

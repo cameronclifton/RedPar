@@ -1,0 +1,14 @@
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/install/local.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/install/strip.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/install.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/list_install_components.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/rebuild_cache.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/edit_cache.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/CMakeFiles/junction.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/install/local.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/rebuild_cache.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/edit_cache.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/install/strip.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/install.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/list_install_components.dir
+/Users/adamsvetec/Desktop/College/Fall_2017/CSE_375/redis-module/deps/junction/turf/CMakeFiles/turf.dir

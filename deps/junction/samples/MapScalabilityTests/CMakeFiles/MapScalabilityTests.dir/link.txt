@@ -1,0 +1,1 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -g -std=c++11 -fno-stack-protector -fno-exceptions -pthread -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/MapScalabilityTests.dir/MapScalabilityTests.cpp.o  -o MapScalabilityTests.app/Contents/MacOS/MapScalabilityTests ../../libjunction.a ../../turf/libturf.a 

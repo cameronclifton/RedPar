@@ -1,0 +1,1 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++  -g -std=c++11 -fno-stack-protector -fno-exceptions -pthread -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/MallocTest.dir/MallocTest.cpp.o  -o MallocTest.app/Contents/MacOS/MallocTest ../../libjunction.a ../../turf/libturf.a 
