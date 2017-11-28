@@ -13,8 +13,8 @@ CXXFILES = t_int reint
 TARGET = reint.so
 
 OFILES = $(patsubst %, %.o, $(CXXFILES))
-CXXFLAGS = -Wall $(DEBUGFLAGS)
-SHOBJ_LDFLAGS ?= -dylib -exported_symbol _RedisModule_OnLoad -macosx_version_min 10.6
+CXXFLAGS = -Wall $(DEBUGFLAGS) -std=c++11
+SHOBJ_LDFLAGS ?=  -dylib -exported_symbol _RedisModule_OnLoad -macosx_version_min 10.6
 
 all: $(TARGET)
 
@@ -24,7 +24,7 @@ all: $(TARGET)
 
 $(TARGET): $(OFILES)
 	@echo [LD] $^ "-->" $@
-	$(LD) -o $@ $^ $(SHOBJ_LDFLAGS) -lc -lm 
+	$(LD) -o $@ $^ $(SHOBJ_LDFLAGS) -lc -lm -lstdc++
 
 .PHONY: all clean
 

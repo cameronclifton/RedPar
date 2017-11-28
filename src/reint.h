@@ -2,9 +2,14 @@
 #define REINT_H
 
 #include "redismodule.h"
-
+#include <thread>
+#include <mutex>
+#include <queue>
 #define RLMODULE_NAME "ReINT"
 #define RLMODULE_DESC "Integer data type for Redis"
+
+#define THREAD_COUNT 4
+
 
 #ifndef PROJECT_VERSION_MAJOR
 #define PROJECT_VERSION_MAJOR 999

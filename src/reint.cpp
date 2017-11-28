@@ -1,5 +1,48 @@
 #include "reint.h"
 
+struct event{
+  RedisModuleCtx *ctx;
+  RedisModuleString **argv;
+  int argc;
+  event(RedisModuleCtx *ctx, RedisModuleString **argv, int argc):ctx(ctx),argv(argv),argc(argc) {};
+};
+
+//singleton wrapper for fifo std::queue
+class event_queue{
+  
+public:
+  std::queue<event> events;
+
+  std::mutex queue_mutex;
+ 
+  static event_queue& getInstance(){
+    
+    static event_queue instance;//initialized once and guaranteed to be destroyed
+    
+    return instance;
+  }
+  
+  event_queue(event_queue const &) = delete;//prevents these functions from being called
+  void operator = (event_queue const &) = delete; 
+  
+private:
+  event_queue(){ }
+
+};
+
+
+void work(){
+
+
+
+
+    //switch for all operations
+
+  
+  
+}
+
+
 /* reint.set KEY VALUE */
 int reint_set(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     if(argc != 3){
@@ -62,7 +105,11 @@ extern "C" int RedisModule_OnLoad(RedisModuleCtx *ctx) {
  if (RedisModule_CreateCommand(ctx, "reint.decr", reint_decr, "write", 1, 1, 1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
-
-    return REDISMODULE_OK;
+ 
+ for( int i =0; i < THREAD_COUNT; ++i){
+   std::thread(work);
+ }
+ 
+ return REDISMODULE_OK;
 }
 
