@@ -3,4 +3,6 @@
 *.o
 .externalToolBuilders/
 .project
-deps/*
+deps/junction/junction-install/*
+deps/junction/build/*
+*.DS_Store
