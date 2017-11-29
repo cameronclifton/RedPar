@@ -40,7 +40,7 @@ junction:
 
 $(TARGET): $(OFILES) junction
 	@echo [LD] $^ "-->" $@
-	$(LD) -o $@ $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) -lc -lm -lstdc++ 
+	$(LD) -o $@ $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) -lc -lm -lc++ -lstdc++ 
 
 
 .PHONY: all clean
