@@ -23,7 +23,7 @@ JUNCTION_INSTALL_DIR = $(JUNCTION_DIR)/junction-install
 
 OFILES = $(patsubst %, %.o, $(CXXFILES))
 INCLUDE_DIRS = -I"$(JUNCTION_INSTALL_DIR)/include" 
-CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS)
+CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS) -std=c++11
 LIBS = $(JUNCTION_INSTALL_DIR)/lib/libjunction.a
 SHOBJ_LDFLAGS ?= -dylib -exported_symbol _RedisModule_OnLoad -macosx_version_min 10.6
 
@@ -38,9 +38,9 @@ junction:
 	@echo [CXX] $< "-->" $@
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(TARGET): $(OFILES) #junction
+$(TARGET): $(OFILES) junction
 	@echo [LD] $^ "-->" $@
-	$(LD) -o $@ $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) -lc -lm -lstdc++
+	$(LD) -o $@ $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) -lc -lm -lstdc++ 
 
 
 .PHONY: all clean
