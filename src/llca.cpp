@@ -128,7 +128,7 @@ void llca_free(void *value) {
 
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
     // Register the module itself – it’s called example and has an API version of 1
-    if (RedisModule_Init(ctx, "llca_type", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
+    if (Export_RedisModule_Init(ctx, "llca_type", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
     //no periods before, because g++, this doesn't work todo fix this all options need to be initiliazed

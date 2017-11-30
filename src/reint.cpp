@@ -13,7 +13,6 @@ struct llca_insert_event: public event {
         if(argc != 2){
             //RedisModule_WrongArity(ctx);
         }
- 
         RedisModule_ReplyWithLongLong(ctx,1);
     };    
 };
