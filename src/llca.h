@@ -3,7 +3,7 @@
 
 #include "redis/redismodule_wrapper.h"
 
-static int LLCA_OnLoad(RedisModuleCtx *ctx);
+int LLCA_OnLoad(RedisModuleCtx *ctx);
 
 
 #endif 

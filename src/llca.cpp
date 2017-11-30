@@ -1,4 +1,5 @@
 #include "llca.h"
+#include "eventqueue.h"
 
 static RedisModuleType * llca;
 
@@ -156,12 +157,32 @@ void llca_digest(RedisModuleDigest *md, void *value) {
 
 
 
+
+struct llca_insert_event: public event {
+    llca_insert_event(RedisModuleCtx *ctx, RedisModuleString **argv, int argc): event(ctx,argv,argc){};
+    virtual void execute(){
+        if(argc != 2){
+            //RedisModule_WrongArity(ctx);
+        }
+        RedisModule_ReplyWithLongLong(ctx,1);
+    };    
+};
+
+
+int llca_insert_handler(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+    event_queue& eq = event_queue::getInstance();
+    std::shared_ptr<llca_insert_event> lie(new llca_insert_event(ctx, argv, argc));
+    eq.enqueue(lie);
+    return 1;
+}
+
+
+
+
+
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
-    // Register the module itself – it’s called example and has an API version of 1
-    if (Export_RedisModule_Init(ctx, "llca_type", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
-        return REDISMODULE_ERR;
-    }
-    //no periods before, because g++, this doesn't work todo fix this all options need to be initiliazed
+    
+
     RedisModuleTypeMethods tm = {
    .rdb_load=  llca_rdb_load,
     .rdb_save= llca_rdb_save,
