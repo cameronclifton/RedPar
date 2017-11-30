@@ -14,7 +14,7 @@ ifeq ($(DEBUG), 1)
 endif
 
 CXX = g++
-CXXFILES = t_int reint
+CXXFILES = t_int reint llca
 
 TARGET = reint.so
 
