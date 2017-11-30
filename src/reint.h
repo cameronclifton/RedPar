@@ -1,10 +1,6 @@
 #ifndef REINT_H
 #define REINT_H
 
-#include "redismodule.h"
-#include <thread>
-#include <mutex>
-#include <queue>
 #define RLMODULE_NAME "ReINT"
 #define RLMODULE_DESC "Integer data type for Redis"
 
