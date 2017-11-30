@@ -119,8 +119,38 @@ void llca_rdb_save(RedisModuleIO *rdb, void* value) {
     }
 }
 
+
+void llca_aof_rewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
+  llca_obj *ll =(llca_obj*) value;
+    llca_node *node = ll->head;
+    while(node) {
+        RedisModule_EmitAOF(aof,"LLCA_TYPE.INSERT","sl",key,node->value);
+        node = node->next;
+    }
+}
+
+/* The goal of this function is to return the amount of memory used by
+ * the HelloType value. */
+size_t llca_mem_usage(const void *value) {
+  const llca_obj *ll = (llca_obj*)value;
+    llca_node *node = ll->head;
+    return sizeof(*ll) + sizeof(*node)*ll->len;
+}
+
+
+
 void llca_free(void *value) {
   llca_release((llca_obj*)value);
+}
+
+void llca_digest(RedisModuleDigest *md, void *value) {
+  llca_obj *ll = (llca_obj*)value;
+    llca_node *node = ll->head;
+    while(node) {
+        RedisModule_DigestAddLongLong(md,node->value);
+        node = node->next;
+    }
+    RedisModule_DigestEndSequence(md);
 }
 
 
@@ -133,9 +163,12 @@ int LLCA_OnLoad(RedisModuleCtx *ctx) {
     }
     //no periods before, because g++, this doesn't work todo fix this all options need to be initiliazed
     RedisModuleTypeMethods tm = {
-     rdb_load  llca_rdb_load,
-     rdb_save llca_rdb_save,
-     free llca_free
+   .rdb_load=  llca_rdb_load,
+    .rdb_save= llca_rdb_save,
+    .aof_rewrite= llca_aof_rewrite,
+    .mem_usage= llca_mem_usage,
+    .free= llca_free,
+    .digest=llca_digest
     };
     
     llca = RedisModule_CreateDataType(ctx,"llca_type",0,&tm);
