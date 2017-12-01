@@ -14,9 +14,8 @@ ifeq ($(DEBUG), 1)
 endif
 
 
-CXX = clang++
-LD = clang++
-
+CXX = g++-7 
+LD = g++-7
 
 TARGET = reint.so
 
@@ -28,10 +27,12 @@ CXX_SOURCES = $(wildcard $(SOURCEDIR)/*.cpp)
 OFILES = $(patsubst $(SOURCEDIR)/%.cpp, $(SOURCEDIR)/%.o, $(CXX_SOURCES))
 
 INCLUDE_DIRS = -I"$(JUNCTION_INSTALL_DIR)/include" 
-CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS) -std=c++11 -stdlib=libc++
+#CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS) -std=c++11 -stdlib=libc++
+CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS) -std=c++11
 LIBS = $(JUNCTION_INSTALL_DIR)/lib/libjunction.a
-SHOBJ_LDFLAGS ?= -shared -lc++
-
+#SHOBJ_LDFLAGS ?= -shared -lc++
+#SHOBJ_LDFLAGS ?= -dylib -exported_symbol _RedisModule_OnLoad -macosx_version_min 10.6 -lstdc++
+SHOBJ_LDFLAGS ?= -shared
 all: $(TARGET)
 
 junction:
