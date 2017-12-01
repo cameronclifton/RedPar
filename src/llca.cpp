@@ -168,15 +168,15 @@ struct llca_insert_event: public event {
 
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
 
-  RedisModuleTypeMethods tm;
-  tm.version=1;
-  tm.rdb_load= llca_rdb_load;
-  tm.rdb_save= llca_rdb_save;
-  tm.aof_rewrite= llca_aof_rewrite;
-  tm.mem_usage= llca_mem_usage;
-  tm.free= llca_free;
-  tm.digest= llca_digest;
- 
+    RedisModuleTypeMethods tm = {
+        1,
+        llca_rdb_load,
+        llca_rdb_save,
+        llca_aof_rewrite,
+        llca_mem_usage,
+        llca_digest,
+        llca_free
+    };
 
     llca = RedisModule_CreateDataType(ctx,"llca_type",0,&tm);
     if(llca == nullptr) return REDISMODULE_ERR;
