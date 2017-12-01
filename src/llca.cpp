@@ -154,13 +154,9 @@ void llca_digest(RedisModuleDigest *md, void *value) {
     RedisModule_DigestEndSequence(md);
 }
 
-
-
-
-
 struct llca_insert_event: public event {
-    llca_insert_event(RedisModuleCtx *ctx, RedisModuleString **argv, int argc): event(ctx,argv,argc){};
-    virtual void execute(){
+    using event::event;
+    void execute(){
         if(argc != 2){
             //RedisModule_WrongArity(ctx);
         }
@@ -168,34 +164,22 @@ struct llca_insert_event: public event {
     };    
 };
 
-
-int llca_insert_handler(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-    event_queue& eq = event_queue::getInstance();
-    std::shared_ptr<llca_insert_event> lie(new llca_insert_event(ctx, argv, argc));
-    eq.enqueue(lie);
-    return 1;
-}
-
-
-
-
-
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
     
 
     RedisModuleTypeMethods tm = {
-   .rdb_load=  llca_rdb_load,
-    .rdb_save= llca_rdb_save,
-    .aof_rewrite= llca_aof_rewrite,
-    .mem_usage= llca_mem_usage,
-    .free= llca_free,
-    .digest=llca_digest
+        .rdb_load=  llca_rdb_load,
+        .rdb_save= llca_rdb_save,
+        .aof_rewrite= llca_aof_rewrite,
+        .mem_usage= llca_mem_usage,
+        .free= llca_free,
+        .digest=llca_digest
     };
-    
+
     llca = RedisModule_CreateDataType(ctx,"llca_type",0,&tm);
     if(llca == nullptr) return REDISMODULE_ERR;
-    
-    if (RedisModule_CreateCommand(ctx, "llca_type.insert",llca_insert_RedisCommand , "write", 1, 1, 1) == REDISMODULE_ERR) {
+
+    if (RedisModule_CreateCommand(ctx, "llca_type.insert", handler<llca_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
 

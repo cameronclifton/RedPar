@@ -1,6 +1,8 @@
 #ifndef REDISMODULE_WRAPPER_H
 #define REDISMODULE_WRAPPER_H
 
+#define REDISMODULE_EXPERIMENTAL_API
+
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdio.h>

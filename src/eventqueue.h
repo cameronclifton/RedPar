@@ -1,10 +1,21 @@
 #ifndef EVENTQUEUE_H
 #define EVENTQUEUE_H
 
-
-#include "event.h"
 #include <mutex>
 #include <queue>
+
+#include "redis/redismodule_wrapper.h"
+
+struct event{
+    RedisModuleCtx *ctx;
+    RedisModuleString **argv;
+    int argc;
+    RedisModuleBlockedClient * client;
+    event(RedisModuleCtx *ctx, RedisModuleString **argv, int argc, RedisModuleBlockedClient* client);
+    virtual void execute() = 0;
+};
+
+
 //singleton wrapper for fifo std::queue
 class event_queue{
 
@@ -28,5 +39,17 @@ class event_queue{
         event_queue(){ }
 };
 
+int reply_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
+
+int timeout_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
+
+template<typename E>
+int handler(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
+    RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, reply_func, timeout_func, NULL, 0);
+    event_queue& eq = event_queue::getInstance();
+    std::shared_ptr<E> e(new E{ctx, argv, argc, client});
+    eq.enqueue(e);
+    return REDISMODULE_OK;
+}  
 
 #endif

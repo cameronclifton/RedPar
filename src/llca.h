@@ -5,6 +5,5 @@
 
 int LLCA_OnLoad(RedisModuleCtx *ctx);
 
-
 #endif 
 

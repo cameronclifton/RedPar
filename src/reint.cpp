@@ -1,12 +1,8 @@
 #include "reint.h"
-#include "event.h"
 #include "eventqueue.h"
 #include "llca.h"
 #include "redis/redismodule_wrapper.h"
 #include <thread>
-
-
-
 
 void work(){
     event_queue& eq = event_queue::getInstance();
@@ -19,9 +15,7 @@ void work(){
 }
 
 
-
 extern "C" int RedisModule_OnLoad(RedisModuleCtx *ctx) {
-    // Register the module itself – it’s called example and has an API version of 1
     if (Export_RedisModule_Init(ctx, "CAMAP", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
