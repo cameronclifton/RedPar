@@ -161,7 +161,8 @@ struct llca_insert_event: public event {
             //RedisModule_WrongArity(ctx);
         }
         RedisModule_ReplyWithLongLong(ctx,1);
-    };    
+	//unblock the client that called the event here
+    }
 };
 
 int LLCA_OnLoad(RedisModuleCtx *ctx) {

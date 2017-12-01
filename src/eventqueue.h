@@ -45,11 +45,15 @@ int timeout_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
 
 template<typename E>
 int handler(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
-    RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, reply_func, timeout_func, NULL, 0);
-    event_queue& eq = event_queue::getInstance();
-    std::shared_ptr<E> e(new E{ctx, argv, argc, client});
-    eq.enqueue(e);
-    return REDISMODULE_OK;
+  //block the client here, will be unblocked in struct <event type>'s execute function  
+  RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, reply_func, timeout_func, NULL, 0);
+  event_queue& eq = event_queue::getInstance();
+  std::shared_ptr<E> e(new E{ctx, argv, argc, client});
+  eq.enqueue(e);
+  return REDISMODULE_OK;
+//this return is why we need to block the client, the return will basically tell the server that the module has completed the computation,
+//therefore we block and tell the server to save the client information and forbid client to send anymore requests, once the enqueued event is completed
+//we can return the results to the blocked client and then unblock the client. 
 }  
 
 #endif
