@@ -25,10 +25,14 @@ std::shared_ptr<event> event_queue::dequeue(){
 }
 
 int reply_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
-    return RedisModule_ReplyWithSimpleString(ctx,"Hello!");
+    RedisModuleString* result = (RedisModuleString*) RedisModule_GetBlockedClientPrivateData(ctx);
+    return RedisModule_ReplyWithString(ctx,result);
 }
 
 int timeout_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
-        return RedisModule_ReplyWithNull(ctx);
+    return RedisModule_ReplyWithNull(ctx);
 }
 
+void free_privdata(void *privdata){
+    RedisModule_Free(privdata);
+}

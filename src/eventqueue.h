@@ -43,10 +43,12 @@ int reply_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
 
 int timeout_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc);
 
+void free_privdata(void *privdata);
+
 template<typename E>
 int handler(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
   //block the client here, will be unblocked in struct <event type>'s execute function  
-  RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, reply_func, timeout_func, NULL, 0);
+  RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, reply_func, timeout_func, free_privdata, 0);
   event_queue& eq = event_queue::getInstance();
   std::shared_ptr<E> e(new E{ctx, argv, argc, client});
   eq.enqueue(e);

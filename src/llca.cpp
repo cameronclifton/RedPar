@@ -158,23 +158,23 @@ struct llca_insert_event: public event {
     using event::event;
     void execute(){
         if(argc != 2){
-            //RedisModule_WrongArity(ctx);
+
         }
-        RedisModule_ReplyWithLongLong(ctx,1);
+        RedisModuleString * result = RedisModule_CreateString(ctx, "Hello World!", sizeof("Hello World!"));
+        RedisModule_UnblockClient(client,result);
 	//unblock the client that called the event here
     }
 };
 
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
-    
 
     RedisModuleTypeMethods tm = {
-        .rdb_load=  llca_rdb_load,
+        .rdb_load= llca_rdb_load,
         .rdb_save= llca_rdb_save,
         .aof_rewrite= llca_aof_rewrite,
         .mem_usage= llca_mem_usage,
         .free= llca_free,
-        .digest=llca_digest
+        .digest= llca_digest
     };
 
     llca = RedisModule_CreateDataType(ctx,"llca_type",0,&tm);
