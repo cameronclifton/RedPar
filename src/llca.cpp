@@ -24,17 +24,18 @@ struct llca_obj *createLLCAObject(){
   o->len = 0;
   return o;
 }
-
+//untested
 void llca_insert(struct llca_obj* o, int64_t val){
 
    llca_node* next = o->head;
    llca_node* newnode;
    llca_node* prev = nullptr;
 
-  while(next->value < val){
+  while(next && next->value < val){
     prev = next;
     next = next->next;
   }
+  std::cerr<<"new node allocation\n";
   newnode =(llca_node*)RedisModule_Alloc(sizeof(*newnode));
   newnode->value = val;
   newnode->next = next;
@@ -46,9 +47,19 @@ void llca_insert(struct llca_obj* o, int64_t val){
   }
   o->len++;
 }
+//untested
+bool llca_contains(struct llca_obj* o, int64_t val){
+  llca_node* cur = o->head;
+  while(cur) {
+    if(cur->value == val){
+      return true;
+    }
+    cur = cur->next;
+  }
+  return false;
+}
 
-
-
+//untested
 void llca_release(struct llca_obj* o){
   
   struct llca_node *cur, *next;
@@ -64,14 +75,32 @@ void llca_release(struct llca_obj* o){
 
 
 /* ====== "llca" commands ==============*/
- 
+/* llca_type.create key*/
+int llca_create_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc){
+  RedisModule_AutoMemory(ctx);
+  if (argc != 2) return RedisModule_WrongArity(ctx);
+  struct llca_obj* ll;
+  ll = createLLCAObject();
+  RedisModuleKey *key;// openkey call needs to be implemented. 
+  RedisModule_ModuleTypeSetValue(key,llca,ll);
+  return REDISMODULE_OK;
+}
+
+
 /*llca.insert key val*/
 int llca_insert_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
    RedisModule_AutoMemory(ctx); /* Use automatic memory management. */
-
+   std::cerr<<"inside llca_insert_rediscommand\n";
     if (argc != 3) return RedisModule_WrongArity(ctx);
-    RedisModuleKey *key =(RedisModuleKey*) RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+    std::cerr<<"before openKEY\n";
+    std::cerr<<argv[1]<<"\n";
+    RedisModule_ThreadSafeContextLock(ctx);
+    void *v_key = RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+    std::cerr<<"after key opening\n";
+    RedisModule_ThreadSafeContextUnlock(ctx);
+    RedisModuleKey* key= (RedisModuleKey*) v_key;
     int type = RedisModule_KeyType(key);
+    std::cerr<<"after key type\n";
     if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
     {
         return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
@@ -84,17 +113,22 @@ int llca_insert_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int 
 
     struct llca_obj *ll;
     if(type == REDISMODULE_KEYTYPE_EMPTY){
+      std::cerr<<"before creation\n";
       ll = createLLCAObject();
+      std::cerr<<"after creation\n";
       RedisModule_ModuleTypeSetValue(key,llca,ll);
     }
     else{
       ll =(llca_obj*) RedisModule_ModuleTypeGetValue(key);
     }
+    std::cerr<<"before insert\n";
     llca_insert(ll,value);
-    RedisModule_ReplyWithLongLong(ctx,ll->len);
+    std::cerr<<"after insert\n";
+    //RedisModule_ReplyWithLongLong(ctx,ll->len);
     RedisModule_ReplicateVerbatim(ctx);
     return REDISMODULE_OK;
 }
+
 
 /* "llca" type methods */
 
@@ -159,10 +193,36 @@ void llca_digest(RedisModuleDigest *md, void *value) {
 struct llca_insert_event: public event {
     using event::event;
     void execute(){
-        RedisModuleString * result = RedisModule_CreateString(ctx, "Hello World!", sizeof("Hello World!"));
-        RedisModule_UnblockClient(client,result);
+      std::cerr<<"before threadsafe\n";
+      
+      
+      if(llca_insert_RedisCommand(ctx,argv,argc)== REDISMODULE_OK){
+	std::cout<<"sucessful command\n";
+	  RedisModuleString * result = RedisModule_CreateString(ctx, "success",7);
+	  std::cerr<<"result : "<<result<<"\n";
+	  RedisModule_ReplyWithString(ctx,result);
+	  RedisModule_UnblockClient(client,NULL);
+	  std::cerr<<"after unblock\n";
+      }
+      else{
+	//todo :error handle
+	}
+      
     }
 };
+struct llca_create_event: public event{
+  using event::event;		       
+  void execute(){
+    if(llca_create_RedisCommand(ctx,argv,argc) == REDISMODULE_OK){
+      RedisModuleString * result = RedisModule_CreateString(ctx, "success",7);
+      RedisModule_UnblockClient(client,result);
+    }
+    else{
+	//todo : implement error
+	}
+  }
+};
+
 
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
 
@@ -181,6 +241,10 @@ int LLCA_OnLoad(RedisModuleCtx *ctx) {
 
     if (RedisModule_CreateCommand(ctx, "llca_type.insert", handler<llca_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
+    }
+    
+    if(RedisModule_CreateCommand(ctx, "llca_type.create", handler<llca_create_event>, "write", 1,1,1) == REDISMODULE_ERR){
+      return REDISMODULE_ERR;
     }
 
     return REDISMODULE_OK;

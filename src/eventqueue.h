@@ -49,9 +49,10 @@ void free_privdata(void *privdata);
 template<typename E>
 int handler(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
   //block the client here, will be unblocked in struct <event type>'s execute function  
-  RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, reply_func, timeout_func, free_privdata, 0);
+  RedisModuleBlockedClient * client = RedisModule_BlockClient(ctx, NULL, NULL, NULL, 0);
+  RedisModuleCtx* tsc = RedisModule_GetThreadSafeContext(client);
   event_queue& eq = event_queue::getInstance();
-  std::shared_ptr<E> e(new E{ctx, argv, argc, client});
+  std::shared_ptr<E> e(new E{tsc, argv, argc, client});
   eq.enqueue(e);
   return REDISMODULE_OK;
 //this return is why we need to block the client, the return will basically tell the server that the module has completed the computation,

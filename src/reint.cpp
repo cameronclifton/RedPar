@@ -16,7 +16,8 @@ void work(){
         std::shared_ptr<event> e = eq.dequeue();
         if(e != nullptr){
             e->execute();
-        }
+	    RedisModule_FreeThreadSafeContext(e->ctx);
+	}
     }
 }
 
