@@ -1,6 +1,8 @@
 #include "llca.h"
 #include "eventqueue.h"
 
+#include <iostream>
+
 static RedisModuleType * llca;
 
 struct llca_node{
@@ -157,12 +159,8 @@ void llca_digest(RedisModuleDigest *md, void *value) {
 struct llca_insert_event: public event {
     using event::event;
     void execute(){
-        if(argc != 2){
-
-        }
         RedisModuleString * result = RedisModule_CreateString(ctx, "Hello World!", sizeof("Hello World!"));
         RedisModule_UnblockClient(client,result);
-	//unblock the client that called the event here
     }
 };
 

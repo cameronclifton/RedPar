@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include <queue>
+#include <iostream>
 
 #include "redis/redismodule_wrapper.h"
 
