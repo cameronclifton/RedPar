@@ -24,7 +24,7 @@ struct llca_obj *createLLCAObject(){
   o->len = 0;
   return o;
 }
-//untested
+
 void llca_insert(struct llca_obj* o, int64_t val){
 
    llca_node* next = o->head;
@@ -47,7 +47,28 @@ void llca_insert(struct llca_obj* o, int64_t val){
   }
   o->len++;
 }
-//untested
+
+void llca_remove(struct llca_obj* o, int64_t val){
+   
+  llca_node* prev = o->head;
+  llca_node* cur = prev->next;
+  if(prev->value == val){
+    o->head = o->head->next;
+    delete prev;
+    return;
+  }
+  prev = cur;
+  while(prev->next != NULL && prev->next->value !=val){
+    prev= prev->next;
+  } 
+  if(prev->next == NULL){
+    return;
+  }
+  prev->next = prev->next->next;
+  return;
+
+}
+
 bool llca_contains(struct llca_obj* o, int64_t val){
   llca_node* cur = o->head;
   while(cur) {
@@ -75,6 +96,32 @@ void llca_release(struct llca_obj* o){
 
 
 /* ====== "llca" commands ==============*/
+int llca_remove_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc){
+  RedisModule_AutoMemory(ctx);
+  if (argc != 3) return RedisModule_WrongArity(ctx);
+  RedisModule_ThreadSafeContextLock(ctx);
+  RedisModuleKey *key =  (RedisModuleKey*) RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+  RedisModule_ThreadSafeContextUnlock(ctx);
+  int type = RedisModule_KeyType(key); 
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
+    {
+      return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+    }
+  //set value
+  long long value;
+  if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
+    return RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
+  }
+  if(type == REDISMODULE_KEYTYPE_EMPTY){
+    return RedisModule_ReplyWithError(ctx,"No list exists for that key");
+  } else{
+    llca_obj* ll = (llca_obj*) RedisModule_ModuleTypeGetValue(key);
+    llca_remove(ll,value);
+    return REDISMODULE_OK;
+  }
+  return REDISMODULE_OK;
+}
+
 /* llca_type.contains key val*/
 int llca_contains_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc,bool& contain){
   RedisModule_AutoMemory(ctx);
@@ -195,6 +242,23 @@ void llca_digest(RedisModuleDigest *md, void *value) {
     RedisModule_DigestEndSequence(md);
 }
 
+
+struct llca_remove_event: public event{
+  using event::event;
+  void execute(){
+    RedisModuleString * result;
+    if(llca_remove_RedisCommand(ctx,argv,argc) == REDISMODULE_OK){
+      result = RedisModule_CreateString(ctx, "success",7);
+    }
+    else{
+      result = RedisModule_CreateString(ctx,"failure",7);
+    }
+    RedisModule_ReplyWithString(ctx,result);
+    RedisModule_UnblockClient(client,NULL);
+  }
+
+};
+
 struct llca_contains_event: public event{
   using event::event;
   void execute(){
@@ -203,7 +267,7 @@ struct llca_contains_event: public event{
     bool contain = false;
     if(llca_contains_RedisCommand(ctx,argv,argc,contain)== REDISMODULE_OK){
       if(contain == true){
-      result = RedisModule_CreateString(ctx, "value present",13);
+       result = RedisModule_CreateString(ctx, "value present",13);
       }
       else{
       result = RedisModule_CreateString(ctx, "value not present",17);
@@ -264,6 +328,9 @@ int LLCA_OnLoad(RedisModuleCtx *ctx) {
     }
     
     if(RedisModule_CreateCommand(ctx, "llca_type.contains", handler<llca_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
+      return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_type.remove", handler<llca_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
       return REDISMODULE_ERR;
     }
 
