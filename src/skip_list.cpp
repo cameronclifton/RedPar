@@ -90,6 +90,7 @@ void llca_conc_digest(RedisModuleDigest *md, void *value) {
 struct llca_conc_create_event: public event{
     using event::event;
     void execute(){
+      std::cerr<<"creating conc\n";
         if(!check_arity(ctx, argc, 2)){
             return;
         }
@@ -148,7 +149,7 @@ struct llca_conc_remove_event: public event{
             return;
         }
         llca_conc_obj* obj = lookup_key(ctx, argv[1], thread_safe);
-        if(obj == nullptr){
+	if(obj == nullptr){
             return;
         }
         if(obj->remove(value)){
