@@ -75,14 +75,30 @@ void llca_release(struct llca_obj* o){
 
 
 /* ====== "llca" commands ==============*/
-/* llca_type.create key*/
-int llca_create_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc){
+/* llca_type.contains key val*/
+int llca_contains_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc,bool& contain){
   RedisModule_AutoMemory(ctx);
-  if (argc != 2) return RedisModule_WrongArity(ctx);
-  struct llca_obj* ll;
-  ll = createLLCAObject();
-  RedisModuleKey *key;// openkey call needs to be implemented. 
-  RedisModule_ModuleTypeSetValue(key,llca,ll);
+  if (argc != 3) return RedisModule_WrongArity(ctx);
+  RedisModule_ThreadSafeContextLock(ctx);
+  RedisModuleKey *key =  (RedisModuleKey*) RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+  RedisModule_ThreadSafeContextUnlock(ctx);
+  int type = RedisModule_KeyType(key); 
+  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
+    {
+      return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+    }
+  //set value
+  long long value;
+  if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
+        return RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
+    }
+  if(type == REDISMODULE_KEYTYPE_EMPTY){
+    return RedisModule_ReplyWithError(ctx,"No list exists for that key");
+  } else{
+    llca_obj* ll = (llca_obj*) RedisModule_ModuleTypeGetValue(key);
+    contain = llca_contains(ll,value);
+    return REDISMODULE_OK;
+  }
   return REDISMODULE_OK;
 }
 
@@ -90,42 +106,31 @@ int llca_create_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int 
 /*llca.insert key val*/
 int llca_insert_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
    RedisModule_AutoMemory(ctx); /* Use automatic memory management. */
-   std::cerr<<"inside llca_insert_rediscommand\n";
     if (argc != 3) return RedisModule_WrongArity(ctx);
-    std::cerr<<"before openKEY\n";
-    std::cerr<<argv[1]<<"\n";
     RedisModule_ThreadSafeContextLock(ctx);
-    void *v_key = RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
-    std::cerr<<"after key opening\n";
+    RedisModuleKey* key =  (RedisModuleKey*)RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
     RedisModule_ThreadSafeContextUnlock(ctx);
-    RedisModuleKey* key= (RedisModuleKey*) v_key;
-    int type = RedisModule_KeyType(key);
-    std::cerr<<"after key type\n";
+    int type = RedisModule_KeyType(key); 
     if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
     {
         return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
     }
-
     long long value;
     if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
         return RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
     }
-
     struct llca_obj *ll;
-    if(type == REDISMODULE_KEYTYPE_EMPTY){
-      std::cerr<<"before creation\n";
+    if(type == REDISMODULE_KEYTYPE_EMPTY){//create new key if one doens't already exist
       ll = createLLCAObject();
-      std::cerr<<"after creation\n";
       RedisModule_ModuleTypeSetValue(key,llca,ll);
     }
     else{
       ll =(llca_obj*) RedisModule_ModuleTypeGetValue(key);
     }
-    std::cerr<<"before insert\n";
     llca_insert(ll,value);
-    std::cerr<<"after insert\n";
     //RedisModule_ReplyWithLongLong(ctx,ll->len);
-    RedisModule_ReplicateVerbatim(ctx);
+    //   RedisModule_ReplicateVerbatim(ctx);
+    //todo : what is replicate verbatim all about?
     return REDISMODULE_OK;
 }
 
@@ -190,19 +195,33 @@ void llca_digest(RedisModuleDigest *md, void *value) {
     RedisModule_DigestEndSequence(md);
 }
 
+struct llca_contains_event: public event{
+  using event::event;
+  void execute(){
+    RedisModuleString * result;
+
+    bool contain = false;
+    if(llca_contains_RedisCommand(ctx,argv,argc,contain)== REDISMODULE_OK){
+      if(contain == true){
+      result = RedisModule_CreateString(ctx, "value present",13);
+      }
+      else{
+      result = RedisModule_CreateString(ctx, "value not present",17);
+      }
+    RedisModule_ReplyWithString(ctx,result);
+    }
+    RedisModule_UnblockClient(client,NULL);
+  }
+
+};
+
 struct llca_insert_event: public event {
     using event::event;
     void execute(){
-      std::cerr<<"before threadsafe\n";
-      
-      
       if(llca_insert_RedisCommand(ctx,argv,argc)== REDISMODULE_OK){
-	std::cout<<"sucessful command\n";
 	  RedisModuleString * result = RedisModule_CreateString(ctx, "success",7);
-	  std::cerr<<"result : "<<result<<"\n";
 	  RedisModule_ReplyWithString(ctx,result);
 	  RedisModule_UnblockClient(client,NULL);
-	  std::cerr<<"after unblock\n";
       }
       else{
 	//todo :error handle
@@ -210,6 +229,7 @@ struct llca_insert_event: public event {
       
     }
 };
+/*
 struct llca_create_event: public event{
   using event::event;		       
   void execute(){
@@ -221,7 +241,7 @@ struct llca_create_event: public event{
 	//todo : implement error
 	}
   }
-};
+  };*/
 
 
 int LLCA_OnLoad(RedisModuleCtx *ctx) {
@@ -243,7 +263,7 @@ int LLCA_OnLoad(RedisModuleCtx *ctx) {
         return REDISMODULE_ERR;
     }
     
-    if(RedisModule_CreateCommand(ctx, "llca_type.create", handler<llca_create_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_type.contains", handler<llca_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
       return REDISMODULE_ERR;
     }
 
