@@ -44,10 +44,10 @@ bool string_to_longlong(RedisModuleCtx* ctx, RedisModuleString* str, long long &
     return true;
 }
 
-llca_conc_obj* lookup_key(RedisModuleCtx* ctx, RedisModuleString* key_str){
-    RedisModule_ThreadSafeContextLock(ctx);
+llca_conc_obj* lookup_key(RedisModuleCtx* ctx, RedisModuleString* key_str, bool thread_safe){
+    if(!thread_safe){ RedisModule_ThreadSafeContextLock(ctx); }
     RedisModuleKey *key = (RedisModuleKey*) RedisModule_OpenKey(ctx,key_str,REDISMODULE_READ|REDISMODULE_WRITE);
-    RedisModule_ThreadSafeContextUnlock(ctx);
+    if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
     int type = RedisModule_KeyType(key); 
     if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca_conc){
         RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
@@ -93,17 +93,18 @@ struct llca_conc_create_event: public event{
         if(!check_arity(ctx, argc, 2)){
             return;
         }
-        RedisModule_ThreadSafeContextLock(ctx);
+        if(!thread_safe){ RedisModule_ThreadSafeContextLock(ctx); }
         RedisModuleKey* key =  (RedisModuleKey*)RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
         int type = RedisModule_KeyType(key); 
         if(type != REDISMODULE_KEYTYPE_EMPTY){
             RedisModule_ReplyWithSimpleString(ctx,"ERR: key already exists");
-            return RedisModule_ThreadSafeContextUnlock(ctx);
+            if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
+            return;
         }
         void * ll_address = RedisModule_Alloc(sizeof(llca_conc_obj));
         llca_conc_obj * ll = new (ll_address) llca_conc_obj();
         RedisModule_ModuleTypeSetValue(key,llca_conc,ll);
-        RedisModule_ThreadSafeContextUnlock(ctx);
+        if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
         RedisModule_ReplyWithSimpleString(ctx,"OK");
     }
 };
@@ -114,22 +115,24 @@ struct llca_conc_delete_event: public event{
         if(!check_arity(ctx, argc, 2)){
             return;
         }
-        RedisModule_ThreadSafeContextLock(ctx);
+        if(!thread_safe) { RedisModule_ThreadSafeContextLock(ctx); }
         RedisModuleKey* key =  (RedisModuleKey*)RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
         int type = RedisModule_KeyType(key); 
         if(type == REDISMODULE_KEYTYPE_EMPTY){
             RedisModule_ReplyWithSimpleString(ctx,"ERR: key does not exist");
-            return RedisModule_ThreadSafeContextUnlock(ctx);;
+            if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
+            return; 
         }
         if (RedisModule_ModuleTypeGetType(key) != llca_conc){
             RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
-            return RedisModule_ThreadSafeContextUnlock(ctx);;
+            if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
+            return; 
         }
         llca_conc_obj * ll = (llca_conc_obj*) RedisModule_ModuleTypeGetValue(key); 
         ll->sl.~SkipListSet_impl();
         RedisModule_Free(ll);
         RedisModule_DeleteKey(key);
-        RedisModule_ThreadSafeContextUnlock(ctx);
+        if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
         RedisModule_ReplyWithSimpleString(ctx,"OK");
     }
 };
@@ -144,7 +147,7 @@ struct llca_conc_remove_event: public event{
         if(!string_to_longlong(ctx,argv[2],value)){
             return;
         }
-        llca_conc_obj* obj = lookup_key(ctx, argv[1]);
+        llca_conc_obj* obj = lookup_key(ctx, argv[1], thread_safe);
         if(obj == nullptr){
             return;
         }
@@ -166,7 +169,7 @@ struct llca_conc_contains_event: public event{
         if(!string_to_longlong(ctx,argv[2],value)){
             return;
         }
-        llca_conc_obj* obj = lookup_key(ctx, argv[1]);
+        llca_conc_obj* obj = lookup_key(ctx, argv[1], thread_safe);
         if(obj == nullptr){
             return;
         }
@@ -188,7 +191,7 @@ struct llca_conc_insert_event: public event {
         if(!string_to_longlong(ctx,argv[2],value)){
             return;
         }
-        llca_conc_obj* obj = lookup_key(ctx, argv[1]);
+        llca_conc_obj* obj = lookup_key(ctx, argv[1], thread_safe);
         if(obj == nullptr){
             return;
         }
@@ -215,19 +218,19 @@ int LLCA_Conc_OnLoad(RedisModuleCtx *ctx) {
     llca_conc = RedisModule_CreateDataType(ctx,"llca_conc",0,&tm);
     if(llca_conc == nullptr) return REDISMODULE_ERR;
 
-    if (RedisModule_CreateCommand(ctx, "llca_conc.insert", event_queue::handler<llca_conc_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    if (RedisModule_CreateCommand(ctx, "llca_conc.insert", event_queue::conc_handler<llca_conc_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
-    if(RedisModule_CreateCommand(ctx, "llca_conc.contains", event_queue::handler<llca_conc_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_conc.contains", event_queue::conc_handler<llca_conc_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
-    if(RedisModule_CreateCommand(ctx, "llca_conc.remove", event_queue::handler<llca_conc_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_conc.remove", event_queue::conc_handler<llca_conc_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
-    if(RedisModule_CreateCommand(ctx, "llca_conc.create", event_queue::handler<llca_conc_create_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_conc.create", event_queue::conc_handler<llca_conc_create_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
-    if(RedisModule_CreateCommand(ctx, "llca_conc.delete", event_queue::handler<llca_conc_delete_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_conc.delete", event_queue::conc_handler<llca_conc_delete_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
 

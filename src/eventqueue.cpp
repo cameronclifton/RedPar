@@ -1,13 +1,20 @@
 #include "eventqueue.h"
 
-event::event(RedisModuleCtx *ctx_a, RedisModuleString **argv, int argc): argv(argv), argc(argc) {
-    client = RedisModule_BlockClient(ctx_a, NULL, NULL, NULL, 0);
-    ctx = RedisModule_GetThreadSafeContext(client);
+event::event(RedisModuleCtx *ctx_a, RedisModuleString **argv, int argc, bool ts): argv(argv), argc(argc), thread_safe(ts) {
+    if(thread_safe){
+        ctx = ctx_a;
+        client = nullptr;
+    }else{
+        client = RedisModule_BlockClient(ctx_a, NULL, NULL, NULL, 0);
+        ctx = RedisModule_GetThreadSafeContext(client);
+    }
 }
 
 event::~event(){
-    RedisModule_FreeThreadSafeContext(ctx);
-    RedisModule_UnblockClient(client,NULL);     
+    if(!thread_safe){
+        RedisModule_FreeThreadSafeContext(ctx);
+        RedisModule_UnblockClient(client,NULL);     
+    }
 }
 
 event_queue& event_queue::getInstance(){ //thread safe?

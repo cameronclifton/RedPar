@@ -341,14 +341,14 @@ int LLCA_OnLoad(RedisModuleCtx *ctx) {
     llca = RedisModule_CreateDataType(ctx,"llca_type",0,&tm);
     if(llca == nullptr) return REDISMODULE_ERR;
 
-    if (RedisModule_CreateCommand(ctx, "llca_type.insert", event_queue::handler<llca_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
+    if (RedisModule_CreateCommand(ctx, "llca_type.insert", event_queue::conc_handler<llca_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
 
-    if(RedisModule_CreateCommand(ctx, "llca_type.contains", event_queue::handler<llca_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_type.contains", event_queue::conc_handler<llca_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
-    if(RedisModule_CreateCommand(ctx, "llca_type.remove", event_queue::handler<llca_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
+    if(RedisModule_CreateCommand(ctx, "llca_type.remove", event_queue::conc_handler<llca_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
 
