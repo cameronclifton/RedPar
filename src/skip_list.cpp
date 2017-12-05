@@ -1,4 +1,4 @@
-#include "llca_conc.h"
+#include "skip_list.h"
 #include "eventqueue.h"
 #include <cds/container/skip_list_set_hp.h>
 
@@ -233,6 +233,23 @@ int LLCA_Conc_OnLoad(RedisModuleCtx *ctx) {
     if(RedisModule_CreateCommand(ctx, "llca_conc.delete", event_queue::conc_handler<llca_conc_delete_event>, "write", 1,1,1) == REDISMODULE_ERR){
         return REDISMODULE_ERR;
     }
+
+    if (RedisModule_CreateCommand(ctx, "llca_seq.insert", event_queue::seq_handler<llca_conc_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_seq.contains", event_queue::seq_handler<llca_conc_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_seq.remove", event_queue::seq_handler<llca_conc_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_seq.create", event_queue::seq_handler<llca_conc_create_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_seq.delete", event_queue::seq_handler<llca_conc_delete_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+
 
     return REDISMODULE_OK;
 }
