@@ -48,24 +48,36 @@ void llca_insert(struct llca_obj* o, int64_t val){
   o->len++;
 }
 
-void llca_remove(struct llca_obj* o, int64_t val){
-   
-  llca_node* prev = o->head;
-  llca_node* cur = prev->next;
-  if(prev->value == val){
-    o->head = o->head->next;
-    delete prev;
-    return;
+bool llca_remove(struct llca_obj* o, int64_t val){
+  if(o->head == NULL){//list is initialized but empty
+    return false;
   }
-  prev = cur;
-  while(prev->next != NULL && prev->next->value !=val){
-    prev= prev->next;
+  llca_node* cur = o->head;
+  llca_node* prev = cur;
+  if(cur->value == val){//needs to delete first value in list
+    o->head = cur->next;
+    RedisModule_Free(cur);
+    return true;
+  }
+  
+  while(cur->next != NULL && cur->value != val){
+    prev = cur;
+    cur= cur->next;
   } 
-  if(prev->next == NULL){
-    return;
+  if(cur->next == NULL){//traversed to end of list
+    if(cur->value == val){//is value at end of list?
+      prev->next = NULL;
+      RedisModule_Free(cur);
+      return true;
+    }
+    else{//value not in list
+    return false;
+    }
   }
-  prev->next = prev->next->next;
-  return;
+  //must have exited while loop b/c cur->value = val
+  prev->next = cur->next;// delete what lies at n
+  RedisModule_Free(cur);
+  return true;
 
 }
 
@@ -96,75 +108,109 @@ void llca_release(struct llca_obj* o){
 
 
 /* ====== "llca" commands ==============*/
-int llca_remove_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc){
+RedisModuleString* llca_remove_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc){
   RedisModule_AutoMemory(ctx);
-  if (argc != 3) return RedisModule_WrongArity(ctx);
-  RedisModule_ThreadSafeContextLock(ctx);
-  RedisModuleKey *key =  (RedisModuleKey*) RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
-  RedisModule_ThreadSafeContextUnlock(ctx);
-  int type = RedisModule_KeyType(key); 
-  if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
-    {
-      return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+  RedisModuleString * result;
+  if (argc != 3){
+    result =  RedisModule_CreateString(ctx, "wrong arity",11);
+    return result;   
+  }
+  else{
+    RedisModule_ThreadSafeContextLock(ctx);
+    RedisModuleKey *key =  (RedisModuleKey*) RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+    RedisModule_ThreadSafeContextUnlock(ctx);
+    int type = RedisModule_KeyType(key); 
+    if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca){
+      result = RedisModule_CreateString(ctx, "wrong type",10);
+      return result;
     }
-  //set value
-  long long value;
-  if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
-    return RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
+    //set value
+    long long value;
+    if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
+      result = RedisModule_CreateString(ctx, "wrong int type",14);
+      return result;
+    }
+    if(type == REDISMODULE_KEYTYPE_EMPTY){
+      result = RedisModule_CreateString(ctx, "List does not exist",19);
+      return result;
+    }
+    else{
+      llca_obj* ll = (llca_obj*) RedisModule_ModuleTypeGetValue(key);
+      bool remover = llca_remove(ll,value);
+      if(remover){
+	result = RedisModule_CreateString(ctx, "success",7);
+      }
+      else{
+	result = RedisModule_CreateString(ctx, "failure",7);
+      }
+      return result;
+ 
+    }
   }
-  if(type == REDISMODULE_KEYTYPE_EMPTY){
-    return RedisModule_ReplyWithError(ctx,"No list exists for that key");
-  } else{
-    llca_obj* ll = (llca_obj*) RedisModule_ModuleTypeGetValue(key);
-    llca_remove(ll,value);
-    return REDISMODULE_OK;
-  }
-  return REDISMODULE_OK;
 }
-
+ 
 /* llca_type.contains key val*/
-int llca_contains_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc,bool& contain){
+RedisModuleString*  llca_contains_RedisCommand(RedisModuleCtx* ctx, RedisModuleString **argv, int argc){
   RedisModule_AutoMemory(ctx);
-  if (argc != 3) return RedisModule_WrongArity(ctx);
+  RedisModuleString * result;
+  if (argc != 3){
+    result = RedisModule_CreateString(ctx, "wrong arity",11);
+    return result;
+ }
   RedisModule_ThreadSafeContextLock(ctx);
   RedisModuleKey *key =  (RedisModuleKey*) RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
   RedisModule_ThreadSafeContextUnlock(ctx);
   int type = RedisModule_KeyType(key); 
   if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
     {
-      return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+      result = RedisModule_CreateString(ctx, "wrong type",10);
+      return result;
     }
   //set value
   long long value;
   if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
-        return RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
+    result = RedisModule_CreateString(ctx,"wrong int type",14);
+    return result;
     }
   if(type == REDISMODULE_KEYTYPE_EMPTY){
-    return RedisModule_ReplyWithError(ctx,"No list exists for that key");
+    result = RedisModule_CreateString(ctx, "List does not exist",19);
+    return result;
   } else{
     llca_obj* ll = (llca_obj*) RedisModule_ModuleTypeGetValue(key);
-    contain = llca_contains(ll,value);
-    return REDISMODULE_OK;
+    if(llca_contains(ll,value)){
+      result = RedisModule_CreateString(ctx, "value present",13);
+    }
+    else{
+      result = RedisModule_CreateString(ctx, "value not present",17);
+    }
+    return result;
   }
-  return REDISMODULE_OK;
+
 }
 
 
 /*llca.insert key val*/
-int llca_insert_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-   RedisModule_AutoMemory(ctx); /* Use automatic memory management. */
-    if (argc != 3) return RedisModule_WrongArity(ctx);
+RedisModuleString* llca_insert_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  RedisModule_AutoMemory(ctx); /* Use automatic memory management. */
+  RedisModuleString* result; 
+  if (argc != 3){
+   result =  RedisModule_CreateString(ctx, "wrong arity",11);
+   return result;
+ }
+  else{
     RedisModule_ThreadSafeContextLock(ctx);
     RedisModuleKey* key =  (RedisModuleKey*)RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
     RedisModule_ThreadSafeContextUnlock(ctx);
     int type = RedisModule_KeyType(key); 
     if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca)
-    {
-        return RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
-    }
+      {
+	result = RedisModule_CreateString(ctx, "wrong type",10);
+	return result;
+      }
     long long value;
     if ((RedisModule_StringToLongLong(argv[2],&value) != REDISMODULE_OK)) {
-        return RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
+      result = RedisModule_CreateString(ctx, "wrong int type",14);
+      return result;
     }
     struct llca_obj *ll;
     if(type == REDISMODULE_KEYTYPE_EMPTY){//create new key if one doens't already exist
@@ -175,10 +221,8 @@ int llca_insert_RedisCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int 
       ll =(llca_obj*) RedisModule_ModuleTypeGetValue(key);
     }
     llca_insert(ll,value);
-    //RedisModule_ReplyWithLongLong(ctx,ll->len);
-    //   RedisModule_ReplicateVerbatim(ctx);
-    //todo : what is replicate verbatim all about?
-    return REDISMODULE_OK;
+    return RedisModule_CreateString(ctx, "success",7);
+  }
 }
 
 
@@ -246,13 +290,7 @@ void llca_digest(RedisModuleDigest *md, void *value) {
 struct llca_remove_event: public event{
   using event::event;
   void execute(){
-    RedisModuleString * result;
-    if(llca_remove_RedisCommand(ctx,argv,argc) == REDISMODULE_OK){
-      result = RedisModule_CreateString(ctx, "success",7);
-    }
-    else{
-      result = RedisModule_CreateString(ctx,"failure",7);
-    }
+    RedisModuleString * result = llca_remove_RedisCommand(ctx,argv,argc);
     RedisModule_ReplyWithString(ctx,result);
     RedisModule_UnblockClient(client,NULL);
   }
@@ -263,17 +301,8 @@ struct llca_contains_event: public event{
   using event::event;
   void execute(){
     RedisModuleString * result;
-
-    bool contain = false;
-    if(llca_contains_RedisCommand(ctx,argv,argc,contain)== REDISMODULE_OK){
-      if(contain == true){
-       result = RedisModule_CreateString(ctx, "value present",13);
-      }
-      else{
-      result = RedisModule_CreateString(ctx, "value not present",17);
-      }
+    result = llca_contains_RedisCommand(ctx,argv,argc);
     RedisModule_ReplyWithString(ctx,result);
-    }
     RedisModule_UnblockClient(client,NULL);
   }
 
@@ -282,16 +311,10 @@ struct llca_contains_event: public event{
 struct llca_insert_event: public event {
     using event::event;
     void execute(){
-      if(llca_insert_RedisCommand(ctx,argv,argc)== REDISMODULE_OK){
-	  RedisModuleString * result = RedisModule_CreateString(ctx, "success",7);
-	  RedisModule_ReplyWithString(ctx,result);
-	  RedisModule_UnblockClient(client,NULL);
+      RedisModuleString * result = llca_insert_RedisCommand(ctx,argv,argc);
+      RedisModule_ReplyWithString(ctx,result);
+      RedisModule_UnblockClient(client,NULL);
       }
-      else{
-	//todo :error handle
-	}
-      
-    }
 };
 /*
 struct llca_create_event: public event{
