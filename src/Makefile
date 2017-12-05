@@ -13,10 +13,6 @@ ifeq ($(DEBUG), 1)
 	DEBUGFLAGS = -g -ggdb -O0
 endif
 
-
-CXX = g++-7 
-LD = g++-7
-
 TARGET = reint.so
 
 JUNCTION_DIR = $(DEPS_DIR)/junction
@@ -26,10 +22,10 @@ SOURCEDIR=$(shell pwd -P)
 CXX_SOURCES = $(wildcard $(SOURCEDIR)/*.cpp) 
 OFILES = $(patsubst $(SOURCEDIR)/%.cpp, $(SOURCEDIR)/%.o, $(CXX_SOURCES))
 
-INCLUDE_DIRS = -I"$(JUNCTION_INSTALL_DIR)/include" 
+INCLUDE_DIRS = -I"$(JUNCTION_INSTALL_DIR)/include" -I"$(DEPS_DIR)/cds" 
 #CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS) -std=c++11 -stdlib=libc++
 CXXFLAGS = $(INCLUDE_DIRS) -Wall $(DEBUGFLAGS) -std=c++11
-LIBS = $(JUNCTION_INSTALL_DIR)/lib/libjunction.a
+LIBS = $(JUNCTION_INSTALL_DIR)/lib/libjunction.a $(DEPS_DIR)/cds/out/bin/libcds-s_d.a
 #SHOBJ_LDFLAGS ?= -shared -lc++
 #SHOBJ_LDFLAGS ?= -dylib -exported_symbol _RedisModule_OnLoad -macosx_version_min 10.6 -lstdc++
 SHOBJ_LDFLAGS ?= -shared
@@ -40,6 +36,11 @@ junction:
 	$(MAKE) install -C $(DEPS_DIR)/junction/build 
 .PHONY: junction
 
+cds:
+	cmake -B$(DEPS_DIR)/cds/out -H$(DEPS_DIR)/cds
+	$(MAKE) -C $(DEPS_DIR)/cds/out
+.PHONY: cds
+
 %.o: %.cpp
 	@echo [CXX] $< "-->" $@
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -48,9 +49,9 @@ redismodule.o: $(SOURCEDIR)/redis/redismodule.c
 	@echo [CXX] $< "-->" $@
 	@gcc -c -o $(SOURCEDIR)/$@ $<
 
-$(TARGET): $(OFILES) redismodule.o #junction
+$(TARGET): $(OFILES) redismodule.o cds #junction
 	@echo [LD] $^ "-->" $@
-	@$(LD) -o $@ redismodule.o $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) 
+	@$(CXX) -o $@ redismodule.o $(OFILES) $(LIBS) $(SHOBJ_LDFLAGS) 
 
 
 .PHONY: all clean

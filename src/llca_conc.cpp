@@ -1,0 +1,267 @@
+#include "llca_conc.h"
+#include "eventqueue.h"
+#include <cds/container/skip_list_set_hp.h>
+
+#include <iostream>
+
+using cds::container::SkipListSet;
+typedef SkipListSet<cds::gc::HP, int64_t> SkipListSet_impl;
+
+static RedisModuleType * llca_conc;
+
+struct llca_conc_obj{
+    SkipListSet_impl sl; 
+    bool insert(int64_t);
+    bool remove(int64_t);
+    bool contains(int64_t);
+};
+
+bool llca_conc_obj::insert(int64_t val){
+    return sl.insert(val); 
+}
+
+bool llca_conc_obj::remove(int64_t val){
+    return sl.erase(val);
+}
+
+bool llca_conc_obj::contains(int64_t val){
+    return sl.contains(val);
+}
+
+bool check_arity(RedisModuleCtx* ctx, int argc, int expected){
+    if (argc != expected){
+        RedisModule_WrongArity(ctx);
+        return false;
+    }
+    return true;
+}
+
+bool string_to_longlong(RedisModuleCtx* ctx, RedisModuleString* str, long long &value){
+    if ((RedisModule_StringToLongLong(str,&value) != REDISMODULE_OK)) {
+        RedisModule_ReplyWithError(ctx,"ERR invalid value: must be a signed 64 bit integer");
+        return false;
+    }
+    return true;
+}
+
+llca_conc_obj* lookup_key(RedisModuleCtx* ctx, RedisModuleString* key_str){
+    RedisModule_ThreadSafeContextLock(ctx);
+    RedisModuleKey *key = (RedisModuleKey*) RedisModule_OpenKey(ctx,key_str,REDISMODULE_READ|REDISMODULE_WRITE);
+    RedisModule_ThreadSafeContextUnlock(ctx);
+    int type = RedisModule_KeyType(key); 
+    if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca_conc){
+        RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+        return nullptr;
+    }
+    if(type == REDISMODULE_KEYTYPE_EMPTY){
+        RedisModule_ReplyWithError(ctx,"ERR: no list exists for that key");
+        return nullptr;
+    }
+    return (llca_conc_obj*) RedisModule_ModuleTypeGetValue(key);
+}
+
+/* "llca" type methods */
+void* llca_conc_rdb_load(RedisModuleIO* rdb, int encver){
+    /*if (encver != 0) {
+      return NULL;
+      }
+      uint64_t elements = RedisModule_LoadUnsigned(rdb);
+      struct llca_obj* ll = createLLCAObject();
+      while(elements--) {
+      int64_t ele = RedisModule_LoadSigned(rdb);
+      llca_insert(ll,ele);
+      }
+      return ll;*/
+    return nullptr;
+}
+
+void llca_conc_rdb_save(RedisModuleIO *rdb, void* value) {
+    /*struct llca_obj *ll = (llca_obj*)value;
+      struct llca_node *node = ll->head;
+      RedisModule_SaveUnsigned(rdb,ll->len);
+      while(node) {
+      RedisModule_SaveSigned(rdb,node->value);
+      node = node->next;
+      }*/
+}
+
+void llca_conc_aof_rewrite(RedisModuleIO *aof, RedisModuleString *key, void *value) {
+    /*llca_obj *ll =(llca_obj*) value;
+      llca_node *node = ll->head;
+      while(node) {
+      RedisModule_EmitAOF(aof,"LLCA_TYPE.INSERT","sl",key,node->value);
+      node = node->next;
+      }*/
+}
+
+/* The goal of this function is to return the amount of memory used by
+ * the HelloType value. */
+size_t llca_conc_mem_usage(const void *value) {
+    /*const llca_obj *ll = (llca_obj*)value;
+      llca_node *node = ll->head;
+      return sizeof(*ll) + sizeof(*node)*ll->len;
+      */
+    return 0;
+}
+
+void llca_conc_free(void *value) {
+    //llca_release((llca_obj*)value);
+}
+
+void llca_conc_digest(RedisModuleDigest *md, void *value) {
+    /*llca_obj *ll = (llca_obj*)value;
+      llca_node *node = ll->head;
+      while(node) {
+      RedisModule_DigestAddLongLong(md,node->value);
+      node = node->next;
+      }
+      RedisModule_DigestEndSequence(md);*/
+}
+
+struct llca_conc_create_event: public event{
+    using event::event;
+    void execute(){
+        if(!check_arity(ctx, argc, 2)){
+            return;
+        }
+        RedisModule_ThreadSafeContextLock(ctx);
+        RedisModuleKey* key =  (RedisModuleKey*)RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+        int type = RedisModule_KeyType(key); 
+        if(type != REDISMODULE_KEYTYPE_EMPTY){
+            RedisModule_ReplyWithSimpleString(ctx,"ERR: key already exists");
+            return RedisModule_ThreadSafeContextUnlock(ctx);
+        }
+        void * ll_address = RedisModule_Alloc(sizeof(llca_conc_obj));
+        llca_conc_obj * ll = new (ll_address) llca_conc_obj();
+        RedisModule_ModuleTypeSetValue(key,llca_conc,ll);
+        RedisModule_ThreadSafeContextUnlock(ctx);
+        RedisModule_ReplyWithSimpleString(ctx,"OK");
+    }
+};
+
+struct llca_conc_delete_event: public event{
+    using event::event;
+    void execute(){
+        if(!check_arity(ctx, argc, 2)){
+            return;
+        }
+        RedisModule_ThreadSafeContextLock(ctx);
+        RedisModuleKey* key =  (RedisModuleKey*)RedisModule_OpenKey(ctx,argv[1],REDISMODULE_READ|REDISMODULE_WRITE);
+        int type = RedisModule_KeyType(key); 
+        if(type == REDISMODULE_KEYTYPE_EMPTY){
+            RedisModule_ReplyWithSimpleString(ctx,"ERR: key does not exist");
+            return RedisModule_ThreadSafeContextUnlock(ctx);;
+        }
+        if (RedisModule_ModuleTypeGetType(key) != llca_conc){
+            RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
+            return RedisModule_ThreadSafeContextUnlock(ctx);;
+        }
+        llca_conc_obj * ll = (llca_conc_obj*) RedisModule_ModuleTypeGetValue(key); 
+        ll->sl.~SkipListSet_impl();
+        RedisModule_Free(ll);
+        RedisModule_DeleteKey(key);
+        RedisModule_ThreadSafeContextUnlock(ctx);
+        RedisModule_ReplyWithSimpleString(ctx,"OK");
+    }
+};
+
+struct llca_conc_remove_event: public event{
+    using event::event;
+    void execute(){
+        if(!check_arity(ctx, argc, 3)){
+            return;
+        }
+        long long value;
+        if(!string_to_longlong(ctx,argv[2],value)){
+            return;
+        }
+        llca_conc_obj* obj = lookup_key(ctx, argv[1]);
+        if(obj == nullptr){
+            return;
+        }
+        if(obj->remove(value)){
+            RedisModule_ReplyWithSimpleString(ctx,"OK");
+        }else{
+            RedisModule_ReplyWithSimpleString(ctx,"ERR: value does not exist");
+        }
+    }
+};
+
+struct llca_conc_contains_event: public event{
+    using event::event;
+    void execute(){
+        if(!check_arity(ctx, argc, 3)){
+            return;
+        }
+        long long value;
+        if(!string_to_longlong(ctx,argv[2],value)){
+            return;
+        }
+        llca_conc_obj* obj = lookup_key(ctx, argv[1]);
+        if(obj == nullptr){
+            return;
+        }
+        if(obj->contains(value)){
+            RedisModule_ReplyWithSimpleString(ctx,"OK");
+        }else{
+            RedisModule_ReplyWithSimpleString(ctx,"ERR: value does not exist");
+        }
+    }
+};
+
+struct llca_conc_insert_event: public event {
+    using event::event;
+    void execute(){
+        if(!check_arity(ctx, argc, 3)){
+            return;
+        }
+        long long value;
+        if(!string_to_longlong(ctx,argv[2],value)){
+            return;
+        }
+        llca_conc_obj* obj = lookup_key(ctx, argv[1]);
+        if(obj == nullptr){
+            return;
+        }
+        if(obj->insert(value)){
+            RedisModule_ReplyWithSimpleString(ctx,"OK");
+        }else{
+            RedisModule_ReplyWithSimpleString(ctx,"ERR: value exists");
+        }
+    }      
+};
+
+int LLCA_Conc_OnLoad(RedisModuleCtx *ctx) {
+
+    RedisModuleTypeMethods tm = {
+        1,
+        llca_conc_rdb_load,
+        llca_conc_rdb_save,
+        llca_conc_aof_rewrite,
+        llca_conc_mem_usage,
+        llca_conc_digest,
+        llca_conc_free
+    };
+
+    llca_conc = RedisModule_CreateDataType(ctx,"llca_conc",0,&tm);
+    if(llca_conc == nullptr) return REDISMODULE_ERR;
+
+    if (RedisModule_CreateCommand(ctx, "llca_conc.insert", handler<llca_conc_insert_event>, "write", 1, 1, 1) == REDISMODULE_ERR) {
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_conc.contains", handler<llca_conc_contains_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_conc.remove", handler<llca_conc_remove_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_conc.create", handler<llca_conc_create_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+    if(RedisModule_CreateCommand(ctx, "llca_conc.delete", handler<llca_conc_delete_event>, "write", 1,1,1) == REDISMODULE_ERR){
+        return REDISMODULE_ERR;
+    }
+
+    return REDISMODULE_OK;
+}
+

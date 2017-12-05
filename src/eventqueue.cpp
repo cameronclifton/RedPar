@@ -1,7 +1,15 @@
 
 #include "eventqueue.h"
 
-event::event(RedisModuleCtx *ctx, RedisModuleString **argv, int argc, RedisModuleBlockedClient* client): ctx(ctx), argv(argv), argc(argc), client(client) {}
+event::event(RedisModuleCtx *ctx_a, RedisModuleString **argv, int argc): argv(argv), argc(argc) {
+    client = RedisModule_BlockClient(ctx_a, NULL, NULL, NULL, 0);
+    ctx = RedisModule_GetThreadSafeContext(client);
+}
+
+event::~event(){
+    RedisModule_FreeThreadSafeContext(ctx);
+    RedisModule_UnblockClient(client,NULL);     
+}
 
 event_queue& event_queue::getInstance(){ //thread safe?
     static event_queue instance;//initialized once and guaranteed to be destroyed
@@ -24,15 +32,3 @@ std::shared_ptr<event> event_queue::dequeue(){
     }
 }
 
-int reply_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
-    RedisModuleString* result = (RedisModuleString*) RedisModule_GetBlockedClientPrivateData(ctx);
-    return RedisModule_ReplyWithString(ctx,result);
-}
-
-int timeout_func(RedisModuleCtx *ctx, RedisModuleString **argv, int argc){
-    return RedisModule_ReplyWithNull(ctx);
-}
-
-void free_privdata(void *privdata){
-    RedisModule_Free(privdata);
-}

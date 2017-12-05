@@ -5,4 +5,5 @@
 .project
 deps/junction/junction-install/*
 deps/junction/build/*
+deps/cds/out/*
 *.DS_Store
