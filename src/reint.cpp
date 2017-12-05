@@ -3,15 +3,15 @@
 #include "llca.h"
 #include "llca_conc.h"
 #include "redis/redismodule_wrapper.h"
+
 #include <thread>
 #include <iostream>
 #include <vector>
+
 #include <cds/init.h>
 #include <cds/gc/hp.h>
 
 #define CA_THREAD_COUNT 4
-
-static std::vector<std::thread> thread_pool;
 
 void work(){
     cds::threading::Manager::attachThread();
@@ -26,7 +26,7 @@ void work(){
 
 
 extern "C" int RedisModule_OnLoad(RedisModuleCtx *ctx) {
-    if (Export_RedisModule_Init(ctx, "CAMAP", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
+    if (Export_RedisModule_Init(ctx, "CA_multithread", 1, REDISMODULE_APIVER_1) == REDISMODULE_ERR) {
         return REDISMODULE_ERR;
     }
 
@@ -38,8 +38,11 @@ extern "C" int RedisModule_OnLoad(RedisModuleCtx *ctx) {
         return REDISMODULE_ERR;
     }
 
+    //Garbage collection initialization for cds skip list
     cds::Initialize();
     static cds::gc::HP hpGC(67);
+
+    static std::vector<std::thread> thread_pool;
     for( int i =0; i < CA_THREAD_COUNT; ++i){
         thread_pool.emplace_back(work);
     }

@@ -1,4 +1,3 @@
-
 #include "eventqueue.h"
 
 event::event(RedisModuleCtx *ctx_a, RedisModuleString **argv, int argc): argv(argv), argc(argc) {
