@@ -1,7 +1,7 @@
 # Parallel Redis Module supporting multiple Data Types
 
 # Getting Started: 
- * Before getting started it is important to note that this code has not achieved speedup from running sequentially. This is due to the Redis Server requiring our module to lock all thread safe contexts before searching the global keyspace for keys.
+ * Before getting started it is important to note that this code has not achieved speedup from running sequentially on a concurrent skiplist. This is due to the Redis Server requiring our module to lock all thread safe contexts before searching the global keyspace for keys.
  
   - Download and Compile the repository with "make Command.
   - Add path to compiled ".so" file to redis.conf file in redis server 
