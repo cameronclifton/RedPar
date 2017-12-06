@@ -41,6 +41,7 @@ extern "C" int RedisModule_OnLoad(RedisModuleCtx *ctx) {
     //Garbage collection initialization for cds skip list
     cds::Initialize();
     static cds::gc::HP hpGC(67);
+    cds::threading::Manager::attachThread();
 
     static std::vector<std::thread> thread_pool;
     for( int i =0; i < CA_THREAD_COUNT; ++i){
