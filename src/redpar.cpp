@@ -1,4 +1,4 @@
-#include "reint.h"
+#include "redpar.h"
 #include "eventqueue.h"
 #include "llca.h"
 #include "skip_list.h"
@@ -11,7 +11,7 @@
 #include <cds/init.h>
 #include <cds/gc/hp.h>
 
-#define CA_THREAD_COUNT 4
+#define CA_THREAD_COUNT 1 
 
 void work(){
     cds::threading::Manager::attachThread();
