@@ -1,8 +1,6 @@
 package main
 
 import (
-	"math/rand"
-	"time"
 	"os"
 	"github.com/tidwall/redbench"
 )
@@ -30,7 +28,7 @@ func fillSingleOpts() *redbench.Options {
 	singleopts.Clients = 1
 	singleopts.Pipeline = 1
 	singleopts.Quiet = quiet
-	singleopts.Requests = 2
+	singleopts.Requests = 1
 	singleopts.Stderr = os.Stderr
 	singleopts.Stdout = os.Stdout
 	return &singleopts
@@ -53,18 +51,21 @@ func main() {
 
 	opts := fillOpts()
 	singleopts := fillSingleOpts()
-	
-	
-	redbench.Bench("SET", "127.0.0.1:6379", singleopts, nil, func(buf []byte) []byte {
-		return redbench.AppendCommand(buf, "SET", "key:string", "val")
-	})
-	
-	rand.Seed(time.Now().UnixNano())
 
-	
-	redbench.Bench("llca_type.INSERT","127.0.0.1:6379",opts,nil,func(buf []byte) []byte {
-		return redbench.AppendCommand(buf,"llca_type.INSERT","key:abc","7")
-	
+    redbench.Bench("llca_conc.delete","127.0.0.1:6379",singleopts,nil,func(buf []byte) []byte {
+		return redbench.AppendCommand(buf,"llca_conc.delete","a")
 	})
-	
+
+	redbench.Bench("llca_conc.create","127.0.0.1:6379",singleopts,nil,func(buf []byte) []byte {
+		return redbench.AppendCommand(buf,"llca_conc.create","a")
+	})
+
+    redbench.Bench("llca_conc.insert","127.0.0.1:6379",populateopts,nil,func(buf []byte) []byte {
+        return redbench.AppendCommand(buf,"llca_conc.create","a",RAND)
+    })
+
+    redbench.Bench("llca_conc.mix","127.0.0.1:6379",singleopts,nil,func(buf []byte) []byte {
+		return redbench.AppendCommand(buf,"llca_conc.insert","a")
+	})
+
 }
