@@ -4,6 +4,7 @@
 #include <mutex>
 #include <queue>
 #include <iostream>
+#include <memory>
 
 #include "redis/redismodule_wrapper.h"
 

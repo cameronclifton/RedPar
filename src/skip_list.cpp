@@ -45,9 +45,9 @@ bool string_to_longlong(RedisModuleCtx* ctx, RedisModuleString* str, long long &
 }
 
 llca_conc_obj* lookup_key(RedisModuleCtx* ctx, RedisModuleString* key_str, bool thread_safe){
-    if(!thread_safe){ RedisModule_ThreadSafeContextLock(ctx); }
+    //if(!thread_safe){ RedisModule_ThreadSafeContextLock(ctx); }
     RedisModuleKey *key = (RedisModuleKey*) RedisModule_OpenKey(ctx,key_str,REDISMODULE_READ|REDISMODULE_WRITE);
-    if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
+    //if(!thread_safe){ RedisModule_ThreadSafeContextUnlock(ctx); }
     int type = RedisModule_KeyType(key); 
     if (type != REDISMODULE_KEYTYPE_EMPTY && RedisModule_ModuleTypeGetType(key) != llca_conc){
         RedisModule_ReplyWithError(ctx,REDISMODULE_ERRORMSG_WRONGTYPE);
